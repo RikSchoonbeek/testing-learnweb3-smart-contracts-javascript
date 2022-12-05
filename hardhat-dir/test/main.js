@@ -34,8 +34,8 @@ v presale initiation:
   v presaleStarted is set to true
   v presaleEnded is set to current block timestamp + 5 minutes
 - during presale
-  - normal mint is rejected during presale period
-  - only whitelisted addresses can use presaleMint
+  v normal mint is rejected during presale period
+  v only whitelisted addresses can use presaleMint
   - no more than maxTokenIds can be minted in total
   - _price needs to be send with transaction in order for presaleMint to work
   - tokenIds increased by one after successful presaleMint call
@@ -103,7 +103,7 @@ describe("Test the different contracts and their interoperability", function () 
 
   // Used for CryptoDevs contract
   const baseURI = "https://www.example.com/";
-  const maxTokenIds = 3;
+  const maxTokenIds = 2;
 
   let deployedWhitelistContract;
   let deployedCryptoDevsContract;
@@ -223,23 +223,56 @@ describe("Test the different contracts and their interoperability", function () 
 
   it("Presale period should meet the requirements", async function () {
     await deployedCryptoDevsContract.connect(owner).startPresale();
-    // https://hardhat.org/hardhat-network-helpers/docs/reference#increaseto(timestamp)
-    const presaleStartBlockTimeStamp = await helpers.time.latest();
 
     await expect(
       deployedCryptoDevsContract.connect(owner).mint()
     ).to.be.revertedWith("Presale has not ended yet");
 
-    // Increase time with 300 seconds to simulate presale ending
-    await helpers.time.increase(5 * 60);
     await expect(
       deployedCryptoDevsContract.connect(owner).presaleMint()
-    ).to.be.revertedWith("Presale is not running");
+    ).to.be.revertedWith("You are not whitelisted");
 
-    // Make sure this works now, after presale ended
+    await deployedWhitelistContract.connect(owner).addAddressToWhitelist();
+    await deployedWhitelistContract.connect(account2).addAddressToWhitelist();
+    await deployedWhitelistContract.connect(account3).addAddressToWhitelist();
+
+    // Sending too much ether
+    await expect(
+      deployedCryptoDevsContract
+        .connect(owner)
+        .presaleMint({ value: ethers.utils.parseEther("0.015") })
+    ).to.be.revertedWith("Ether sent is not correct");
+
+    // Sending too little ether
+    await expect(
+      deployedCryptoDevsContract
+        .connect(owner)
+        .presaleMint({ value: ethers.utils.parseEther("0.005") })
+    ).to.be.revertedWith("Ether sent is not correct");
+
     await deployedCryptoDevsContract
       .connect(owner)
-      .mint({ value: ethers.utils.parseEther("1") });
+      .presaleMint({ value: ethers.utils.parseEther("0.01") });
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .presaleMint({ value: ethers.utils.parseEther("0.01") });
+
+    await expect(
+      deployedCryptoDevsContract
+        .connect(account3)
+        .presaleMint({ value: ethers.utils.parseEther("0.01") })
+    ).to.be.revertedWith("Exceeded maximum Crypto Devs supply");
+
+    // // Increase time with 300 seconds to simulate presale ending
+    // await helpers.time.increase(5 * 60);
+    // await expect(
+    //   deployedCryptoDevsContract.connect(owner).presaleMint()
+    // ).to.be.revertedWith("Presale is not running");
+
+    // // Make sure this works now, after presale ended
+    // await deployedCryptoDevsContract
+    //   .connect(owner)
+    //   .mint({ value: ethers.utils.parseEther("1") });
   });
 
   //   it("Should mint CryptoDev NFTs as expected", async function () {
