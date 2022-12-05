@@ -7,10 +7,10 @@
 /* The following things are tested
 
 Contract Whitelist
-- deployment
+v deployment
   v maxWhitelistedAddresses is set correctly
   v numAddressesWhitelisted starts at zero
-- whitelisting
+v whitelisting
   v msg sender is whitelisted after successful addAddressToWhitelist call
   v trying to call addAddressToWhitelist as someone who is already whitelisted fails
   v no more than maxWhitelistedAddresses can whitelist: addAddressToWhitelist fails if max is reached
@@ -26,13 +26,13 @@ Contract CryptoDevs
   v sender of deploy transaction is set to contract owner
   - assertion that baseURI passed to constructor is handled correctly is done during presale,
     as we can then call tokenURI(tokenId) having our first tokenId
-- pre presale
-  - minting and presale minting don't work before presale is started
-- presale initiation:
-  - presale can be started with presaleMint function
-  - presaleStarted is set to true
-  - presaleEnded is set to current block timestamp + 5 minutes
-  - only owner of contract can start presale
+v pre presale
+  v minting and presale minting don't work before presale is started
+v presale initiation:
+  v only owner of contract can start presale
+  v presale can be started with presaleMint function
+  v presaleStarted is set to true
+  v presaleEnded is set to current block timestamp + 5 minutes
 - during presale
   - normal mint is rejected during presale period
   - only whitelisted addresses can use presaleMint
@@ -187,7 +187,6 @@ describe("Test the different contracts and their interoperability", function () 
 
     const contractOwner = await deployedCryptoDevsContract.owner();
     assert.equal(contractOwner, owner.address);
-    // expect(deployedCryptoDevsContract.name()).to.equal(maxTokenIds);
   });
 
   it("Minting and presale minting don't work before presale is started", async function () {
@@ -200,29 +199,48 @@ describe("Test the different contracts and their interoperability", function () 
     ).to.be.revertedWith("Presale has not ended yet");
   });
 
-  // it("Presale mint should fail after presale ends (5 minutes), but mint should work", async function () {
-  //   /* During presale the mint function can't be used, after the presale the presaleMint function
-  //      can't be used. This test assert that the checks for this work as expected.
-  //   */
-  //   await deployedCryptoDevsContract.connect(owner).startPresale();
-  //   // https://hardhat.org/hardhat-network-helpers/docs/reference#increaseto(timestamp)
-  //   const presaleStartBlockTimeStamp = await helpers.time.latest();
+  it("Presale initiation meets requirements", async function () {
+    assert.equal(await deployedCryptoDevsContract.presaleStarted(), false);
+    await expect(
+      deployedCryptoDevsContract.connect(account2).startPresale()
+    ).to.be.revertedWith("Ownable: caller is not the owner");
 
-  //   await expect(
-  //     deployedCryptoDevsContract.connect(owner).mint()
-  //   ).to.be.revertedWith("Presale has not ended yet");
+    assert.equal(await deployedCryptoDevsContract.presaleStarted(), false);
+    await deployedCryptoDevsContract.connect(owner).startPresale();
+    assert.equal(await deployedCryptoDevsContract.presaleStarted(), true);
 
-  //   // Increase time with 300 seconds to simulate presale ending
-  //   await helpers.time.increase(5 * 60);
-  //   await expect(
-  //     deployedCryptoDevsContract.connect(owner).presaleMint()
-  //   ).to.be.revertedWith("Presale is not running");
+    // Note to self: https://hardhat.org/hardhat-network-helpers/docs/reference#increaseto(timestamp)
+    const presaleStartedBlockTimeStamp = await helpers.time.latest();
 
-  //   // Make sure this works now, after presale ended
-  //   await deployedCryptoDevsContract
-  //     .connect(owner)
-  //     .mint({ value: ethers.utils.parseEther("1") });
-  // });
+    const presaleEndedTimeStamp =
+      await deployedCryptoDevsContract.presaleEnded();
+    const fiveMinutesInSeconds = 5 * 60;
+    assert.equal(
+      fiveMinutesInSeconds,
+      presaleEndedTimeStamp - presaleStartedBlockTimeStamp
+    );
+  });
+
+  it("Presale period should meet the requirements", async function () {
+    await deployedCryptoDevsContract.connect(owner).startPresale();
+    // https://hardhat.org/hardhat-network-helpers/docs/reference#increaseto(timestamp)
+    const presaleStartBlockTimeStamp = await helpers.time.latest();
+
+    await expect(
+      deployedCryptoDevsContract.connect(owner).mint()
+    ).to.be.revertedWith("Presale has not ended yet");
+
+    // Increase time with 300 seconds to simulate presale ending
+    await helpers.time.increase(5 * 60);
+    await expect(
+      deployedCryptoDevsContract.connect(owner).presaleMint()
+    ).to.be.revertedWith("Presale is not running");
+
+    // Make sure this works now, after presale ended
+    await deployedCryptoDevsContract
+      .connect(owner)
+      .mint({ value: ethers.utils.parseEther("1") });
+  });
 
   //   it("Should mint CryptoDev NFTs as expected", async function () {
   //     // mint and presaleMint should fail before presale has started
