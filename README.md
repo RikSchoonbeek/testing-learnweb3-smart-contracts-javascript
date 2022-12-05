@@ -1,13 +1,9 @@
-# Sample Hardhat Project
+# In this repository I am testing some Solidity smart contracts using Hardhat
+The contracts are not created by myself, but the testing of them is my own work.
+- the contracts are from the learnweb3.io Sophomore course
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+Testing is a very useful tool for asserting that the written code does what it needs to do, and that it doesn't have any unintended effects/possibilities.
 
-Try running some of the following tasks:
+This is also an attempt of me to better understand the different token standards (e.g. ERC20, ERC721), and also the different extensions that OpenZeppeling offers (e.g. ERC721Enumerable, Ownable).
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
-```
+I might write my own smart contracts in the coming weeks with tests.
