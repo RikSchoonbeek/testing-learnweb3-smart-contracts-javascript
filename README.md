@@ -6,4 +6,4 @@ Testing is a very useful tool for asserting that the written code does what it n
 
 This is also an attempt of me to better understand the different token standards (e.g. ERC20, ERC721), and also the different extensions that OpenZeppeling offers (e.g. ERC721Enumerable, Ownable).
 
-I might write my own smart contracts in the coming weeks with tests.
+I might write my own smart contracts in the coming weeks, with tests.
