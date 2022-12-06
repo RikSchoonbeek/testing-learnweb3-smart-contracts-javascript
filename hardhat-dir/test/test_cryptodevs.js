@@ -27,17 +27,16 @@
   4.10 calling presaleMint is rejected if contract is paused
 5 after presale
   5.1 calling presaleMint is rejected
-  5.1 no more than maxTokenCount can be minted in total
-  5.1 _price needs to be send with transaction in order for mint to work
-  5.1 mintedTokenCount increased by one after successful mint call
-  5.1 msg sender has one more Crypto Devs NFT after successful mint call
-  5.1 calling mint is rejected if contract is paused
-  5.1 contract can be set to paused or unpaused by calling setPaused
-  5.9 only owner of contract can pause and unpause contract
-  5.1 calling int is rejected if contract is paused
+  5.2 _price needs to be send with transaction in order for mint to work
+  5.3 mintedTokenCount increased by one after successful mint call
+  5.4 msg sender has one more Crypto Devs NFT after successful mint call
+  5.5 no more than maxTokenCount can be minted in total
+  5.6 calling mint is rejected if contract is paused
+  5.7 contract can be set to paused or unpaused by calling setPaused
+  5.8 only owner of contract can pause and unpause contract
 6 withdraw
-  - only owner of contract can call withdraw
-  - after successful withdraw call ether from contract is transferred to owner address
+  6.1 only owner of contract can call withdraw
+  6.2 after successful withdraw call ether from contract is transferred to owner address
 - notes: the CryptoDevs contract inherits from OpenZeppeling ERC721Enumerable and Ownable
          ideally it would also be tested that these are implemented, somehow. But I guess
          a standard set of tests can be written for this and maybe already exist.
@@ -193,7 +192,6 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
     await deployedCryptoDevsContract.connect(owner).startPresale();
 
     await deployedWhitelistContract.connect(account2).addAddressToWhitelist();
-    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 0);
     const senderBalance = await deployedCryptoDevsContract
       .connect(account2)
       .balanceOf(account2.address);
@@ -258,6 +256,7 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
     await expect(
       deployedCryptoDevsContract.connect(account2).setPaused(true)
     ).to.be.revertedWith("Ownable: caller is not the owner");
+    assert.isFalse(await deployedCryptoDevsContract._paused());
 
     await deployedCryptoDevsContract.connect(owner).setPaused(true);
     assert.isTrue(await deployedCryptoDevsContract._paused());
@@ -273,8 +272,140 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
     await deployedCryptoDevsContract
       .connect(account2)
       .presaleMint({ value: ethers.utils.parseEther("0.01") });
+
+    const account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 2);
+    assert.equal(account2Balance, 2);
   });
 
-  //   4.8 contract can be set to paused or unpaused by calling setPaused
-  //   4.9 calling presaleMint is rejected if contract is paused
+  it("5 after presale, 5.1, 5.2, 5.3, 5.4 and 5.5", async function () {
+    await deployedCryptoDevsContract.connect(owner).startPresale();
+    // Fast forward time to the point where presale is over
+    await helpers.time.increase(300);
+
+    await expect(
+      deployedCryptoDevsContract
+        .connect(account2)
+        .presaleMint({ value: ethers.utils.parseEther("0.01") })
+    ).to.be.revertedWith("Presale is not running");
+    let account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 0);
+    assert.equal(account2Balance, 0);
+
+    // Sending too much ether
+    await expect(
+      deployedCryptoDevsContract
+        .connect(account2)
+        .mint({ value: ethers.utils.parseEther("0.015") })
+    ).to.be.revertedWith("Ether sent is not correct");
+
+    // Sending too little ether
+    await expect(
+      deployedCryptoDevsContract
+        .connect(account2)
+        .mint({ value: ethers.utils.parseEther("0.005") })
+    ).to.be.revertedWith("Ether sent is not correct");
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 0);
+    account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(account2Balance, 0);
+
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 1);
+    account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(account2Balance, 1);
+
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 2);
+    account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(account2Balance, 2);
+
+    await expect(
+      deployedCryptoDevsContract
+        .connect(account2)
+        .mint({ value: ethers.utils.parseEther("0.01") })
+    ).to.be.revertedWith("Exceeded maximum Crypto Devs supply");
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 2);
+    account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(account2Balance, 2);
+  });
+
+  it("5 after presale, 5.6, 5.7 and 5.8", async function () {
+    await deployedCryptoDevsContract.connect(owner).startPresale();
+    // Fast forward time to the point where presale is over
+    await helpers.time.increase(300);
+    assert.isFalse(await deployedCryptoDevsContract._paused());
+
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+
+    await expect(
+      deployedCryptoDevsContract.connect(account2).setPaused(true)
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+    assert.isFalse(await deployedCryptoDevsContract._paused());
+
+    await deployedCryptoDevsContract.connect(owner).setPaused(true);
+    assert.isTrue(await deployedCryptoDevsContract._paused());
+
+    await expect(
+      deployedCryptoDevsContract
+        .connect(account2)
+        .mint({ value: ethers.utils.parseEther("0.01") })
+    ).to.be.revertedWith("Contract currently paused");
+
+    await deployedCryptoDevsContract.connect(owner).setPaused(false);
+    assert.isFalse(await deployedCryptoDevsContract._paused());
+
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+
+    const account2Balance = await deployedCryptoDevsContract
+      .connect(account2)
+      .balanceOf(account2.address);
+    assert.equal(await deployedCryptoDevsContract.mintedTokenCount(), 2);
+    assert.equal(account2Balance, 2);
+  });
+
+  it("6 withdraw", async function () {
+    await deployedCryptoDevsContract.connect(owner).startPresale();
+    // Fast forward time to the point where presale is over
+    await helpers.time.increase(300);
+
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+    await deployedCryptoDevsContract
+      .connect(account2)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+
+    let ownerBalance = await deployedCryptoDevsContract
+      .connect(account3)
+      .balanceOf(owner.address);
+    assert.equal(ownerBalance, 0);
+    await expect(
+      deployedCryptoDevsContract.connect(account3).withdraw()
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+
+    ownerBalance = await deployedCryptoDevsContract
+      .connect(account3)
+      .balanceOf(account2.address);
+    assert.equal(ownerBalance, 2);
+  });
 });
