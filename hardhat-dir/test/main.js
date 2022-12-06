@@ -6,17 +6,6 @@
 
 /* The following things are tested
 
-Contract Whitelist
-v deployment
-  v maxWhitelistedAddresses is set correctly
-  v numAddressesWhitelisted starts at zero
-v whitelisting
-  v msg sender is whitelisted after successful addAddressToWhitelist call
-  v trying to call addAddressToWhitelist as someone who is already whitelisted fails
-  v no more than maxWhitelistedAddresses can whitelist: addAddressToWhitelist fails if max is reached
-  v numAddressesWhitelisted is increased by one after successful addAddressToWhitelist call,
-    respecting the set maxWhitelistedAddresses
-
 Contract CryptoDevs
 - deployment
   v maxTokenCount correctly set
@@ -229,9 +218,9 @@ describe("Test the different contracts and their interoperability", function () 
   //     deployedCryptoDevsContract.connect(owner).mint()
   //   ).to.be.revertedWith("Presale has not ended yet");
 
-  //   await expect(
-  //     deployedCryptoDevsContract.connect(owner).presaleMint()
-  //   ).to.be.revertedWith("You are not whitelisted");
+  // await expect(
+  //   deployedCryptoDevsContract.connect(owner).presaleMint()
+  // ).to.be.revertedWith("You are not whitelisted");
 
   //   await deployedWhitelistContract.connect(owner).addAddressToWhitelist();
   //   await deployedWhitelistContract.connect(account2).addAddressToWhitelist();
