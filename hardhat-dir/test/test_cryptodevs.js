@@ -37,6 +37,7 @@
 6 withdraw
   6.1 only owner of contract can call withdraw
   6.2 after successful withdraw call ether from contract is transferred to owner address
+      (minus the transaction costs)
 - notes: the CryptoDevs contract inherits from OpenZeppeling ERC721Enumerable and Ownable
          ideally it would also be tested that these are implemented, somehow. But I guess
          a standard set of tests can be written for this and maybe already exist.
@@ -395,26 +396,27 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
       .connect(account2)
       .mint({ value: ethers.utils.parseEther("0.01") });
 
-    // TODO fix test that assert's that the above 0.02 ether it transferred to owner account
-    // note that for some reasong the actual balance increase seams 0.01996912692350157
-    // I wonder where the difference went?
     const balanceBeforeWithdraw = await owner.getBalance();
-    console.log(">>>>>>>> balanceBeforeWithdraw", balanceBeforeWithdraw);
     await expect(
       deployedCryptoDevsContract.connect(account3).withdraw()
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
-    await deployedCryptoDevsContract.connect(owner).withdraw();
-
+    const withdrawTransaction = await deployedCryptoDevsContract
+      .connect(owner)
+      .withdraw();
+    const withdrawTxReceipt = await withdrawTransaction.wait();
+    const withdrawTransactionCost = withdrawTxReceipt.gasUsed.mul(
+      withdrawTxReceipt.effectiveGasPrice
+    );
     const balanceAfterWithdraw = await owner.getBalance();
-    const balanceDelta = balanceAfterWithdraw - balanceBeforeWithdraw;
-    console.log(">>>>>>>>>>>>> a", balanceBeforeWithdraw);
-    console.log(">>>>>>>>>>>>> b", balanceAfterWithdraw);
-    console.log(">>>>>>>>>>>>> c", balanceDelta);
+    const balanceDelta = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
 
+    const expectedBalanceDelta = ethers.utils
+      .parseEther("0.02")
+      .sub(withdrawTransactionCost);
     assert.equal(
-      ethers.utils.parseEther("0.02"),
-      ethers.BigNumber.from(balanceDelta)
+      ethers.utils.formatEther(expectedBalanceDelta),
+      ethers.utils.formatEther(balanceDelta)
     );
   });
 });
