@@ -96,7 +96,7 @@ describe("Tests for CryptoDevToken contract", function () {
     assert.equal(contractOwner, owner.address);
   });
 
-  it("2 claiming tokens using CryptoDevs NFTs, 2.1, 2.2, 2.3", async function () {
+  it("2 claiming tokens using CryptoDevs NFTs, 2.1, 2.2, 2.3 and 2.4", async function () {
     // account2 gets 2 CryptoDevs NFTs
     await deployedCryptoDevsContract
       .connect(account2)
@@ -152,7 +152,7 @@ describe("Tests for CryptoDevToken contract", function () {
       .connect(account3)
       .mint({ value: ethers.utils.parseEther("0.01") });
     // Mint so many tokens that there are just 10 left, using normal mint
-    // Mint 9970 tokens, leaving 10 tokens untill the 10000 limit is reached
+    // Mint 9970 tokens, leaving 10 tokens available before the 10000 limit is reached
     await deployedCryptoDevTokenContract
       .connect(account2)
       .mint(9970, { value: ethers.utils.parseEther("9.97") });
@@ -160,30 +160,51 @@ describe("Tests for CryptoDevToken contract", function () {
     await expect(
       deployedCryptoDevTokenContract.connect(account3).claim()
     ).to.be.revertedWith("Exceeds the max total supply available.");
-    // await deployedCryptoDevTokenContract.connect(account3).claim();
-
-    console.log(
-      "await deployedCryptoDevTokenContract.connect(account3).totalSupply()",
-      await deployedCryptoDevTokenContract.connect(account3).totalSupply()
-    );
   });
 
+  it("3 minting tokens, 3.1, 3.2 and 3.3", async function () {
+    // Sending too much ether
+    await expect(
+      deployedCryptoDevTokenContract
+        .connect(account2)
+        .mint(10, { value: ethers.utils.parseEther("0.011") })
+    ).to.be.revertedWith("Ether sent is incorrect");
+
+    // Sending too little ether
+    await expect(
+      deployedCryptoDevTokenContract
+        .connect(account2)
+        .mint(10, { value: ethers.utils.parseEther("0.009") })
+    ).to.be.revertedWith("Ether sent is incorrect");
+
+    // Minting more tokens than are available
+    await expect(
+      deployedCryptoDevTokenContract
+        .connect(account2)
+        .mint(10001, { value: ethers.utils.parseEther("10.001") })
+    ).to.be.revertedWith("Exceeds the max total supply available.");
+
+    // Successful mint
+    const totalSupplyBefore =
+      await deployedCryptoDevTokenContract.totalSupply();
+    assert.equal(totalSupplyBefore, 0);
+    const account2BalaneBefore = await deployedCryptoDevTokenContract.balanceOf(
+      account2.address
+    );
+    assert.equal(account2BalaneBefore, 0);
+
+    await deployedCryptoDevTokenContract
+      .connect(account2)
+      .mint(10000, { value: ethers.utils.parseEther("10.000") });
+
+    const totalSupplyAfter = await deployedCryptoDevTokenContract.totalSupply();
+    assert.equal(ethers.utils.formatEther(totalSupplyAfter), "10000.0");
+    const account2BalaneAfter = await deployedCryptoDevTokenContract.balanceOf(
+      account2.address
+    );
+    assert.equal(ethers.utils.formatEther(account2BalaneAfter), "10000.0");
+  });
   /*
-  2 claiming tokens using CryptoDevs NFTs
-  V 2.1 a CryptoDevs NFT holder receives CryptoDevToken.tokensPerNFT amount of tokens per unclaimed
-        NFT they own, after a successful call to the claim function
-    2.2 if the caller of the claim function doesn't have any CryptoDevs NFTs:
-      2.2.1 their call will be rejected
-      2.2.2 they will receive no tokens from this transaction
-    2.3 if the caller of the claim function does have NFTs, but no unclaimed NFTs:
-      2.3.1 their call will be rejected
-      2.3.2 they will receive no tokens from this transaction
-    2.4 if the amount of NFTs held by the transaction sender equates more tokens than
-        are available the transaction fails
-  3 minting tokens
-    3.1 if the amount of ether sent is not equal to the amount required the transaction fails
-    3.2 if token mint amount + current total supply > max total supply, than the transaction fails
-    3.3 a successful claim call increases the transaction sender's balance with the amount being minted
   4 withdraw
     4.1 only owner of contract can call withdraw
     4.2 after successful withdraw call ether from contract is transferred to owner address
