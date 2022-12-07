@@ -5,6 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICryptoDevs.sol";
 
+// TODO remove
+import "hardhat/console.sol";
+
 contract CryptoDevToken is ERC20, Ownable {      // Price of one Crypto Dev token
     uint256 public constant tokenPrice = 0.001 ether;
     // Each NFT would give the user 10 tokens
@@ -69,9 +72,14 @@ contract CryptoDevToken is ERC20, Ownable {      // Price of one Crypto Dev toke
         }
         // If all the token Ids have been claimed, revert the transaction;
         require(amount > 0, "You have already claimed all the tokens");
+        uint256 tokensToClaim = amount * tokensPerNFT;
+        require(
+            (totalSupply() + tokensToClaim) <= maxTotalSupply,
+            "Exceeds the max total supply available."
+        );
         // call the internal function from Openzeppelin's ERC20 contract
         // Mint (amount * 10) tokens for each NFT
-        _mint(msg.sender, amount * tokensPerNFT);
+        _mint(msg.sender, tokensToClaim);
     }
 
     /**

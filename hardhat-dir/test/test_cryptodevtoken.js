@@ -30,7 +30,7 @@ const { assert, expect } = require("chai");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 
-describe("Tests for CryptoDevToken", function () {
+describe("Tests for CryptoDevToken contract", function () {
   let owner;
   let account2;
   let account3;
@@ -41,7 +41,7 @@ describe("Tests for CryptoDevToken", function () {
 
   // Used for CryptoDevs contract
   const baseURI = "https://www.example.com/";
-  const maxCryptoDevsNFTCount = 2;
+  const maxCryptoDevsNFTCount = 4;
 
   let deployedWhitelistContract;
   let deployedCryptoDevsContract;
@@ -96,9 +96,8 @@ describe("Tests for CryptoDevToken", function () {
     assert.equal(contractOwner, owner.address);
   });
 
-  it("2 claiming tokens using CryptoDevs NFTs, 2.1, 2.2", async function () {
-    // await deployedWhitelistContract.connect(account2).addAddressToWhitelist();
-
+  it("2 claiming tokens using CryptoDevs NFTs, 2.1, 2.2, 2.3", async function () {
+    // account2 gets 2 CryptoDevs NFTs
     await deployedCryptoDevsContract
       .connect(account2)
       .mint({ value: ethers.utils.parseEther("0.01") });
@@ -106,6 +105,7 @@ describe("Tests for CryptoDevToken", function () {
       .connect(account2)
       .mint({ value: ethers.utils.parseEther("0.01") });
 
+    // account2 claims tokens using NFTs
     let account2Balance = await deployedCryptoDevTokenContract
       .connect(account2)
       .balanceOf(account2.address);
@@ -116,7 +116,7 @@ describe("Tests for CryptoDevToken", function () {
       .balanceOf(account2.address);
     assert.equal(ethers.utils.formatEther(account2Balance), "20.0");
 
-    // Account without CryptoDevs NFTs
+    // account3 without CryptoDevs NFTs claim gets rejected
     let account3Balance = await deployedCryptoDevTokenContract
       .connect(account3)
       .balanceOf(account3.address);
@@ -129,8 +129,7 @@ describe("Tests for CryptoDevToken", function () {
       .balanceOf(account3.address);
     assert.equal(account3Balance, 0);
 
-    // Account with CryptoDevs NFTs, but they are already claimed
-
+    // Account with previously claimed CryptoDevs NFTs new claim gets rejected
     account2Balance = await deployedCryptoDevTokenContract
       .connect(account2)
       .balanceOf(account2.address);
@@ -142,6 +141,31 @@ describe("Tests for CryptoDevToken", function () {
       .connect(account2)
       .balanceOf(account2.address);
     assert.equal(ethers.utils.formatEther(account2Balance), "20.0");
+
+    // Claim gets rejected because the amount of tokens received would cause the
+    // total supply to go over limit
+    // account2 gets 2 CryptoDevs NFTs (20 tokens)
+    await deployedCryptoDevsContract
+      .connect(account3)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+    await deployedCryptoDevsContract
+      .connect(account3)
+      .mint({ value: ethers.utils.parseEther("0.01") });
+    // Mint so many tokens that there are just 10 left, using normal mint
+    // Mint 9970 tokens, leaving 10 tokens untill the 10000 limit is reached
+    await deployedCryptoDevTokenContract
+      .connect(account2)
+      .mint(9970, { value: ethers.utils.parseEther("9.97") });
+    // Try to claim using the NFTs -> expect to fail
+    await expect(
+      deployedCryptoDevTokenContract.connect(account3).claim()
+    ).to.be.revertedWith("Exceeds the max total supply available.");
+    // await deployedCryptoDevTokenContract.connect(account3).claim();
+
+    console.log(
+      "await deployedCryptoDevTokenContract.connect(account3).totalSupply()",
+      await deployedCryptoDevTokenContract.connect(account3).totalSupply()
+    );
   });
 
   /*
