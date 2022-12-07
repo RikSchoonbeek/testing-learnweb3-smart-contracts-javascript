@@ -395,17 +395,26 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
       .connect(account2)
       .mint({ value: ethers.utils.parseEther("0.01") });
 
-    let ownerBalance = await deployedCryptoDevsContract
-      .connect(account3)
-      .balanceOf(owner.address);
-    assert.equal(ownerBalance, 0);
+    // TODO fix test that assert's that the above 0.02 ether it transferred to owner account
+    // note that for some reasong the actual balance increase seams 0.01996912692350157
+    // I wonder where the difference went?
+    const balanceBeforeWithdraw = await owner.getBalance();
+    console.log(">>>>>>>> balanceBeforeWithdraw", balanceBeforeWithdraw);
     await expect(
       deployedCryptoDevsContract.connect(account3).withdraw()
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
-    ownerBalance = await deployedCryptoDevsContract
-      .connect(account3)
-      .balanceOf(account2.address);
-    assert.equal(ownerBalance, 2);
+    await deployedCryptoDevsContract.connect(owner).withdraw();
+
+    const balanceAfterWithdraw = await owner.getBalance();
+    const balanceDelta = balanceAfterWithdraw - balanceBeforeWithdraw;
+    console.log(">>>>>>>>>>>>> a", balanceBeforeWithdraw);
+    console.log(">>>>>>>>>>>>> b", balanceAfterWithdraw);
+    console.log(">>>>>>>>>>>>> c", balanceDelta);
+
+    assert.equal(
+      ethers.utils.parseEther("0.02"),
+      ethers.BigNumber.from(balanceDelta)
+    );
   });
 });

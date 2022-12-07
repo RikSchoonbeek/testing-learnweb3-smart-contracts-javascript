@@ -21,7 +21,7 @@ contract CryptoDevToken is ERC20, Ownable {      // Price of one Crypto Dev toke
     // Mapping to keep track of which tokenIds have been claimed
     mapping(uint256 => bool) public tokenIdsClaimed;
     
-    constructor(address _cryptoDevsContract) ERC20("Crypto Dev Token", "CD") {
+    constructor(address _cryptoDevsContract) ERC20("Crypto Dev Token", "CDT") {
         CryptoDevsNFT = ICryptoDevs(_cryptoDevsContract);
     }
 
