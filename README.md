@@ -9,4 +9,4 @@ This is also an attempt of me to better understand the different token standards
 I might write my own smart contracts in the coming weeks, with tests.
 
 ## Notes
-- Through testing I didn't find that the CryptoDevToken contract's claim function didn't enforce the limit for tokens to be minted, and added this myself.
+- Through testing I did find that the CryptoDevToken contract's claim function didn't enforce the limit for tokens to be minted, and added this myself.
