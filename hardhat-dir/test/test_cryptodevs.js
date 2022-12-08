@@ -405,7 +405,7 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
       .connect(owner)
       .withdraw();
     const withdrawTxReceipt = await withdrawTransaction.wait();
-    const withdrawTransactionCost = withdrawTxReceipt.gasUsed.mul(
+    const withdrawTransactionCosts = withdrawTxReceipt.gasUsed.mul(
       withdrawTxReceipt.effectiveGasPrice
     );
     const balanceAfterWithdraw = await owner.getBalance();
@@ -413,7 +413,7 @@ describe("Tests for CryptoDevs contract and its interaction with the Whitelist c
 
     const expectedBalanceDelta = ethers.utils
       .parseEther("0.02")
-      .sub(withdrawTransactionCost);
+      .sub(withdrawTransactionCosts);
     assert.equal(
       ethers.utils.formatEther(expectedBalanceDelta),
       ethers.utils.formatEther(balanceDelta)
