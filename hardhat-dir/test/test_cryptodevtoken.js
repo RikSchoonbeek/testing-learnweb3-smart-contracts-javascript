@@ -211,52 +211,73 @@ describe("Tests for CryptoDevToken contract", function () {
       .connect(account2)
       .mint(5000, { value: ethers.utils.parseEther("5") });
 
-    // TODO get gas costs of this reverted transaction and assert that
-    //  account3BalanceAfter + tx gast costs === account3BalanceBefore
-    //  meaning that the withdraw failed.
+    const contractEtherBalance1 = await ethers.provider.getBalance(
+      deployedCryptoDevTokenContract.address
+    );
+    assert.equal(ethers.utils.formatEther(contractEtherBalance1), "5.0");
+
     // Assert that withdrawing as someone that's not the owner fails
     const account3BalanceBefore = await account3.getBalance();
     await expect(
       deployedCryptoDevTokenContract.connect(account3).withdraw()
     ).to.be.revertedWith("Ownable: caller is not the owner");
-    // const account3WithdrawTxReceipt = await account3WithdrawTransaction.wait();
-    // const ccount3WithdrawTxCosts = account3WithdrawTxReceipt.gasUsed.mul(
-    //   account3WithdrawTxReceipt.effectiveGasPrice
-    // );
-    // const account3BalanceAfter = await account3.getBalance();
-    // console.log(
-    //   "account3BalanceAfter.sub(account3BalanceBefore).add(ccount3WithdrawTxCosts)",
-    //   account3BalanceAfter
-    //     .sub(account3BalanceBefore)
-    //     .add(ccount3WithdrawTxCosts)
-    // );
-    // console.log('ethers.utils.parseEther("0")', ethers.utils.parseEther("0"));
-    // assert.equal(
-    //   account3BalanceAfter
-    //     .sub(account3BalanceBefore)
-    //     .add(ccount3WithdrawTxCosts),
-    //   ethers.utils.parseEther("0")
-    // );
+    // Get latest transaction hash
+    const latestBlock = await ethers.provider.getBlock("latest");
+    const latestTXHash = latestBlock.transactions.at(-1);
+    // Get latest transaction receipt object
+    const latestTXReceipt = await ethers.provider.getTransactionReceipt(
+      latestTXHash
+    );
+    // Determine latest transaction gas costs
+    const latestTXGasUsage = latestTXReceipt.gasUsed;
+    const latestTXGasPrice = latestTXReceipt.effectiveGasPrice;
+    const latestTXGasCosts = latestTXGasUsage.mul(latestTXGasPrice);
 
-    // // Assert that withdrawing as the owner succeeds
-    // const ownerBalanceBefore = await owner.getBalance();
-    // const withdrawTransaction = await deployedCryptoDevTokenContract
-    //   .connect(owner)
-    //   .withdraw();
-    // const withdrawTxReceipt = await withdrawTransaction.wait();
-    // const withdrawTransactionCosts = withdrawTxReceipt.gasUsed.mul(
-    //   withdrawTxReceipt.effectiveGasPrice
-    // );
-    // const ownerBalanceAfter = await owner.getBalance();
-    // const balanceDelta = ownerBalanceAfter.sub(ownerBalanceBefore);
+    // Assert that account3 didn't get any ether from trying to withdraw
+    const account3BalanceAfter = await account3.getBalance();
+    // Assert that the balance of account3 went down with the amount equal to the transaction costs
+    // of the reverted withdraw transaction
+    assert.equal(
+      ethers.utils.formatEther(account3BalanceAfter),
+      ethers.utils.formatEther(account3BalanceBefore.sub(latestTXGasCosts))
+    );
 
-    // const expectedBalanceDelta = ethers.utils
-    //   .parseEther("5")
-    //   .sub(withdrawTransactionCosts);
-    // assert.equal(
-    //   ethers.utils.formatEther(expectedBalanceDelta),
-    //   ethers.utils.formatEther(balanceDelta)
-    // );
+    // Assert that contract ether balance hasn't changed
+    const contractEtherBalance2 = await ethers.provider.getBalance(
+      deployedCryptoDevTokenContract.address
+    );
+    assert.equal(ethers.utils.formatEther(contractEtherBalance2), "5.0");
+
+    // Assert that withdrawing as the owner succeeds
+    const ownerBalanceBefore = await owner.getBalance();
+    const withdrawTransaction = await deployedCryptoDevTokenContract
+      .connect(owner)
+      .withdraw();
+    const withdrawTxReceipt = await withdrawTransaction.wait();
+    const withdrawTransactionCosts = withdrawTxReceipt.gasUsed.mul(
+      withdrawTxReceipt.effectiveGasPrice
+    );
+    const ownerBalanceAfter = await owner.getBalance();
+    const ownerBalanceDelta = ownerBalanceAfter.sub(ownerBalanceBefore);
+
+    const expectedBalanceDelta = ethers.utils
+      .parseEther("5")
+      .sub(withdrawTransactionCosts);
+    assert.equal(
+      ethers.utils.formatEther(expectedBalanceDelta),
+      ethers.utils.formatEther(ownerBalanceDelta)
+    );
+
+    // Assert that contract ether balance is zero
+    const contractEtherBalance3 = await ethers.provider.getBalance(
+      deployedCryptoDevTokenContract.address
+    );
+    assert.equal(ethers.utils.formatEther(contractEtherBalance3), "0.0");
+
+    console.log(
+      "ethers.utils.formatEther(contractEtherBalance3)",
+      ethers.utils.formatEther(contractEtherBalance3)
+    );
   });
 
   /* TODO
@@ -264,4 +285,12 @@ describe("Tests for CryptoDevToken contract", function () {
     4.1 only owner of contract can call withdraw
     4.2 after successful withdraw call ether from contract is transferred to owner address
   */
+
+  // provider.getTransaction( hash ) ⇒ Promise< TransactionResponse >
+  // provider.getTransactionReceipt( hash ) ⇒ Promise< TransactionReceipt >
+  // provider.getBlock( block ) ⇒ Promise< Block >
+  //  - block.transactions => Array[tx_hashes]
+  // provider.getBlockWithTransactions( block ) ⇒ Promise< BlockWithTransactions >
+  // provider.getTransactionReceipt( hash ) ⇒ Promise< TransactionReceipt >
+  // provider.waitForTransaction( hash [ , confirms = 1 [ , timeout ] ] ) ⇒ Promise< TxReceipt >
 });
