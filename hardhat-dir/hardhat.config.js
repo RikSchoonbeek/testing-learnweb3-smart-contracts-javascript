@@ -1,6 +1,8 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config({ path: ".env" });
 
+const { QUICKNODE_HTTP_URL, MM_T_1_PRIVK } = process.env;
+
 module.exports = {
   solidity: "0.8.17",
   mocha: {
@@ -9,7 +11,7 @@ module.exports = {
   // networks: {
   //   goerli: {
   //     url: QUICKNODE_HTTP_URL,
-  //     accounts: [PRIVATE_KEY],
+  //     accounts: [MM_T_1_PRIVK],
   //   },
   // },
 };
